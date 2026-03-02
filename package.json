@@ -1,11 +1,10 @@
 {
   "name": "crawler-helper",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Crawler helper",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-
   "exports": {
     ".": {
       "import": {
