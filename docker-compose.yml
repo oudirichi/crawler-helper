@@ -1,0 +1,26 @@
+services:
+  # ─── Dev ────────────────────────────────────────────────────────────────────
+  crawler-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    image: crawler:dev
+    container_name: crawler-dev
+    volumes:
+      - .:/app
+    environment:
+      - NODE_ENV=development
+    profiles: [dev]
+
+  # ─── CI ─────────────────────────────────────────────────────────────────────
+  crawler-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ci
+    image: crawler:ci
+    container_name: crawler-ci
+    environment:
+      - NODE_ENV=test
+    profiles: [ci]
