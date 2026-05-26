@@ -5,6 +5,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "domscrape": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": {
@@ -43,6 +46,7 @@
   },
   "sideEffects": false,
   "dependencies": {
+    "commander": "^12.1.0",
     "env-paths": "^4.0.0",
     "puppeteer-core": "^24.37.5"
   }
