@@ -65,6 +65,42 @@ If `--data` is omitted, the page is just loaded and an empty result is emitted.
 Unknown `filterType` / `matchType` values cause the command to exit with status 1
 and an explanatory error on stderr.
 
+### Actions
+
+An optional `actions` array runs sequentially after the page loads and before the
+screenshot is captured. The JSON shape mirrors the [Zyte API actions](https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/actions) spec.
+
+```json
+{
+  "actions": [
+    { "action": "select",          "selector": { "type": "css", "value": "#author" },          "values": ["Albert Einstein"] },
+    { "action": "waitForSelector", "selector": { "type": "css", "value": "[value='world']", "state": "attached" } },
+    { "action": "type",            "selector": { "type": "css", "value": "#q" },               "text": "hello", "delay": 25 },
+    { "action": "click",           "selector": { "type": "css", "value": "[type='submit']" },  "button": "left" },
+    { "action": "hover",           "selector": { "type": "css", "value": ".tooltip-target" } },
+    { "action": "scroll",          "selector": { "type": "css", "value": "#footer" } }
+  ]
+}
+```
+
+| action              | required fields              | optional fields                                      |
+|---------------------|------------------------------|------------------------------------------------------|
+| `click`             | `selector`                   | `button` (`"left"` \| `"right"` \| `"middle"`), `delay` (ms) |
+| `type`              | `selector`, `text`           | `delay` (ms)                                         |
+| `select`            | `selector`, `values`         | —                                                    |
+| `waitForSelector`   | `selector`                   | `timeout` (ms, default 30 000)                       |
+| `hover`             | `selector`                   | —                                                    |
+| `scroll`            | `selector`                   | —                                                    |
+
+**Selector object**: `{ "type": "css", "value": "<css-selector>" }`. Only `type: "css"` is
+supported. `waitForSelector` additionally accepts `"state": "attached"` on the selector object.
+
+**Failure policy**: the first action that errors stops execution immediately. The process exits 1
+and writes `Error: action[<i>] <action>: <message>` to stderr. Network capture (if configured)
+still reports any responses collected up to that point. After clicking a submit button that
+triggers navigation, add an explicit `waitForSelector` for a post-navigation element rather than
+relying on implicit waiting.
+
 ### Output schema
 
 ```json
