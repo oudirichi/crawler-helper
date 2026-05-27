@@ -12,6 +12,7 @@ export interface ScrapeOptions {
 }
 
 export interface ScrapeResult {
+  browserHtml: string;
   screenshot?: string;
   networkCapture: import('./scrape/network-capture').NetworkCaptureEntry[];
 }
@@ -36,7 +37,10 @@ export async function scrape(url: string, options: ScrapeOptions = {}): Promise<
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
     await runActions(page, actions);
 
-    const result: ScrapeResult = { networkCapture: captured };
+    const result: ScrapeResult = { 
+      networkCapture: captured,
+      browserHtml: await page.content(),
+     };
     if (options.screenshot === true) {
       result.screenshot = (await page.screenshot({ encoding: 'base64', type: 'png' })) as string;
     }

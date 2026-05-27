@@ -48,7 +48,7 @@ docker-build:
 	docker compose build
 
 docker-dev:
-	docker compose --profile dev up crawler-dev
+	docker compose --profile dev up -d crawler-dev
 
 docker-dev-sh:
 	docker exec -it crawler-dev sh

@@ -1,22 +1,32 @@
+import { z } from 'zod';
 import type { Page } from 'puppeteer-core';
-import { unsupportedValueError } from './shared';
+import { sleep } from '../sleep';
+
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+const CssSelectorSchema = z.preprocess(
+  (val) => (typeof val === 'string' ? { type: 'css', value: val } : val),
+  z.object({
+    type: z.literal('css'),
+    value: z.string().min(1),
+    state: z.literal('attached').optional(),
+  }),
+);
+
+const ActionSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('click'), selector: CssSelectorSchema, button: z.enum(['left', 'right', 'middle']).optional(), delay: z.number().optional() }),
+  z.object({ action: z.literal('type'), selector: CssSelectorSchema, text: z.string(), delay: z.number().optional() }),
+  z.object({ action: z.literal('select'), selector: CssSelectorSchema, values: z.string().array().min(1) }),
+  z.object({ action: z.literal('waitForTimeout'), timeout: z.number() }),
+  z.object({ action: z.literal('waitForSelector'), selector: CssSelectorSchema, timeout: z.number().optional() }),
+  z.object({ action: z.literal('hover'), selector: CssSelectorSchema }),
+  z.object({ action: z.literal('scroll'), selector: CssSelectorSchema }),
+]);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface CssSelector {
-  type: 'css';
-  value: string;
-  state?: 'attached';
-}
-
-export type Action =
-  | { action: 'click'; selector: CssSelector; button?: 'left' | 'right' | 'middle'; delay?: number }
-  | { action: 'type'; selector: CssSelector; text: string; delay?: number }
-  | { action: 'select'; selector: CssSelector; values: string[] }
-  | { action: 'waitForSelector'; selector: CssSelector; timeout?: number }
-  | { action: 'hover'; selector: CssSelector }
-  | { action: 'scroll'; selector: CssSelector };
-
+export type CssSelector = z.infer<typeof CssSelectorSchema>;
+export type Action = z.infer<typeof ActionSchema>;
 export type ActionName = Action['action'];
 
 // ─── Handler registry (OCP: add a row to extend, never edit control flow) ─────
@@ -25,6 +35,7 @@ type ActionFor<K extends ActionName> = Extract<Action, { action: K }>;
 type Handlers = { [K in ActionName]: (page: Page, a: ActionFor<K>) => Promise<unknown> | unknown };
 
 const HANDLERS = {
+  waitForTimeout: (_p, a) => sleep(a.timeout * 1000),
   click: (p, a) => p.click(a.selector.value, { button: a.button ?? 'left', delay: a.delay }),
   type: (p, a) => p.type(a.selector.value, a.text, { delay: a.delay }),
   select: (p, a) => p.select(a.selector.value, ...a.values),
@@ -37,40 +48,23 @@ const HANDLERS = {
     ),
 } satisfies Handlers;
 
-const SUPPORTED_ACTIONS = Object.keys(HANDLERS) as ActionName[];
-
 // ─── Validation ───────────────────────────────────────────────────────────────
 
-function validateSelector(selector: unknown, path: string): void {
-  if (!selector || typeof selector !== 'object') {
-    throw new Error(`${path}.selector: must be an object`);
-  }
-  const s = selector as Record<string, unknown>;
-  if (s.type !== 'css') {
-    throw unsupportedValueError(`${path}.selector.type`, s.type, ['css']);
-  }
-  if (typeof s.value !== 'string' || s.value === '') {
-    throw new Error(`${path}.selector.value: must be a non-empty string`);
-  }
-  if (s.state !== undefined && s.state !== 'attached') {
-    throw unsupportedValueError(`${path}.selector.state`, s.state, ['attached']);
-  }
+function formatPath(path: (string | number | symbol)[]): string {
+  return path.reduce<string>(
+    (acc, key) => (typeof key === 'number' ? `${acc}[${key}]` : `${acc}.${String(key)}`),
+    '',
+  );
 }
 
 export function validateActions(actions: Action[]): void {
-  actions.forEach((a, i) => {
-    const path = `actions[${i}]`;
-    if (!SUPPORTED_ACTIONS.includes(a.action)) {
-      throw unsupportedValueError(`${path}.action`, a.action, SUPPORTED_ACTIONS);
-    }
-    validateSelector((a as Record<string, unknown>).selector, path);
-    if (a.action === 'type' && typeof a.text !== 'string') {
-      throw new Error(`${path}.text: must be a string (required for "type" action)`);
-    }
-    if (a.action === 'select' && (!Array.isArray(a.values) || a.values.length === 0)) {
-      throw new Error(`${path}.values: must be a non-empty string array (required for "select" action)`);
-    }
-  });
+  const result = z.array(ActionSchema).safeParse(actions);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `actions${formatPath(issue.path)}: ${issue.message}`)
+      .join('; ');
+    throw new Error(issues);
+  }
 }
 
 // ─── Runner ───────────────────────────────────────────────────────────────────

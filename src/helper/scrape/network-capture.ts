@@ -1,17 +1,20 @@
+import { z } from 'zod';
 import type { HTTPResponse, Page } from 'puppeteer-core';
-import { unsupportedValueError } from './shared';
+
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+const NetworkFilterSchema = z.object({
+  filterType: z.literal('url'),
+  matchType: z.literal('contains'),
+  value: z.string(),
+  httpResponseBody: z.boolean().optional(),
+});
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type FilterType = 'url';
-export type MatchType = 'contains';
-
-export interface NetworkFilter {
-  filterType: FilterType;
-  matchType: MatchType;
-  value: string;
-  httpResponseBody?: boolean;
-}
+export type NetworkFilter = z.infer<typeof NetworkFilterSchema>;
+export type FilterType = NetworkFilter['filterType'];
+export type MatchType = NetworkFilter['matchType'];
 
 export interface NetworkCaptureEntry {
   url: string;
@@ -27,31 +30,23 @@ const MATCHERS: Record<MatcherKey, (filterValue: string, url: string) => boolean
   'url/contains': (v, url) => url.includes(v),
 };
 
-const SUPPORTED_FILTER_TYPES = ['url'] as const satisfies readonly FilterType[];
-const SUPPORTED_MATCH_TYPES = ['contains'] as const satisfies readonly MatchType[];
-
 // ─── Validation ───────────────────────────────────────────────────────────────
 
+function formatPath(path: (string | number | symbol)[]): string {
+  return path.reduce<string>(
+    (acc, key) => (typeof key === 'number' ? `${acc}[${key}]` : `${acc}.${String(key)}`),
+    '',
+  );
+}
+
 export function validateFilters(filters: NetworkFilter[]): void {
-  filters.forEach((filter, i) => {
-    if (!SUPPORTED_FILTER_TYPES.includes(filter.filterType)) {
-      throw unsupportedValueError(
-        `networkCapture[${i}].filterType`,
-        filter.filterType,
-        SUPPORTED_FILTER_TYPES,
-      );
-    }
-    if (!SUPPORTED_MATCH_TYPES.includes(filter.matchType)) {
-      throw unsupportedValueError(
-        `networkCapture[${i}].matchType`,
-        filter.matchType,
-        SUPPORTED_MATCH_TYPES,
-      );
-    }
-    if (typeof filter.value !== 'string') {
-      throw new Error(`networkCapture[${i}].value: must be a string`);
-    }
-  });
+  const result = z.array(NetworkFilterSchema).safeParse(filters);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `networkCapture${formatPath(issue.path)}: ${issue.message}`)
+      .join('; ');
+    throw new Error(issues);
+  }
 }
 
 // ─── Listener factory ─────────────────────────────────────────────────────────
@@ -77,7 +72,8 @@ export function attachNetworkCapture(page: Page, filters: NetworkFilter[]): Netw
 
     if (matched.some((f) => f.httpResponseBody === true)) {
       try {
-        entry.httpResponseBody = await response.text();
+        const buf = await response.buffer();
+        entry.httpResponseBody = buf.toString('base64');
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         process.stderr.write(`warn: failed to read body for ${url}: ${msg}\n`);

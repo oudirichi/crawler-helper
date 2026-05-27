@@ -73,12 +73,13 @@ screenshot is captured. The JSON shape mirrors the [Zyte API actions](https://do
 ```json
 {
   "actions": [
-    { "action": "select",          "selector": { "type": "css", "value": "#author" },          "values": ["Albert Einstein"] },
+    { "action": "select",          "selector": "#author",                                                           "values": ["Albert Einstein"] },
     { "action": "waitForSelector", "selector": { "type": "css", "value": "[value='world']", "state": "attached" } },
-    { "action": "type",            "selector": { "type": "css", "value": "#q" },               "text": "hello", "delay": 25 },
-    { "action": "click",           "selector": { "type": "css", "value": "[type='submit']" },  "button": "left" },
-    { "action": "hover",           "selector": { "type": "css", "value": ".tooltip-target" } },
-    { "action": "scroll",          "selector": { "type": "css", "value": "#footer" } }
+    { "action": "type",            "selector": "#q",                                                                "text": "hello", "delay": 25 },
+    { "action": "click",           "selector": "[type='submit']",                                                   "button": "left" },
+    { "action": "hover",           "selector": ".tooltip-target" },
+    { "action": "scroll",          "selector": "#footer" },
+    { "action": "waitForTimeout",  "timeout": 500 }
   ]
 }
 ```
@@ -89,11 +90,13 @@ screenshot is captured. The JSON shape mirrors the [Zyte API actions](https://do
 | `type`              | `selector`, `text`           | `delay` (ms)                                         |
 | `select`            | `selector`, `values`         | —                                                    |
 | `waitForSelector`   | `selector`                   | `timeout` (ms, default 30 000)                       |
+| `waitForTimeout`    | `timeout` (ms)               | —                                                    |
 | `hover`             | `selector`                   | —                                                    |
 | `scroll`            | `selector`                   | —                                                    |
 
-**Selector object**: `{ "type": "css", "value": "<css-selector>" }`. Only `type: "css"` is
-supported. `waitForSelector` additionally accepts `"state": "attached"` on the selector object.
+**Selector**: either a plain CSS string `"#my-id"` or the full object
+`{ "type": "css", "value": "<css-selector>" }`. Only `type: "css"` is supported.
+`waitForSelector` additionally accepts `"state": "attached"` on the object form.
 
 **Failure policy**: the first action that errors stops execution immediately. The process exits 1
 and writes `Error: action[<i>] <action>: <message>` to stderr. Network capture (if configured)
@@ -105,21 +108,25 @@ relying on implicit waiting.
 
 ```json
 {
+  "browserHtml": "<!doctype html>...",
   "screenshot": "iVBORw0KGgoAAAANSUhEUgAA...",
   "networkCapture": [
     {
       "url": "https://example.com/api/test",
       "status": 200,
-      "httpResponseBody": "..."
+      "httpResponseBody": "eyJ0ZXN0IjoidmFsdWUifQ=="
     }
   ]
 }
 ```
 
+- `browserHtml` — always present. Full HTML of the page as rendered by the browser
+  (post-JavaScript, after all actions have run).
 - `screenshot` — base64-encoded PNG of the viewport (1024×880). Omitted entirely
   when `screenshot` was not requested.
 - `networkCapture` — always an array (possibly empty). `httpResponseBody` is only
   present when a matching filter requested it and the body was read successfully.
+  The value is base64-encoded, preserving binary responses faithfully.
 
 ### Worked example
 
@@ -142,11 +149,22 @@ Stdout (truncated):
 
 ```json
 {
+  "browserHtml": "<!doctype html>...",
   "screenshot": "iVBORw0KGgoAAAANSUhEUgAA...",
   "networkCapture": [
-    { "url": "https://example.com/api/test", "status": 200, "httpResponseBody": "..." }
+    { "url": "https://example.com/api/test", "status": 200, "httpResponseBody": "eyJ0ZXN0IjoidmFsdWUifQ==" }
   ]
 }
+```
+
+### Decode screenshot
+```bash
+... | jq --raw-output .screenshot | base64 --decode > screenshot.png
+```
+
+### Decode a network response body
+```bash
+... | jq --raw-output '.networkCapture[0].httpResponseBody' | base64 --decode
 ```
 
 ### Notes

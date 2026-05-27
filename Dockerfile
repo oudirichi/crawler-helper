@@ -29,10 +29,6 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --include=dev
-
-# No COPY here — src/ and config files come from bind mounts in docker-compose
-
 CMD npm install && npm run dev
 
 # ─── Builder ──────────────────────────────────────────────────────────────────
@@ -49,3 +45,13 @@ FROM builder AS ci
 
 RUN npm run lint && npm test
 
+# ─── Prod ─────────────────────────────────────────────────────────────────────
+FROM base AS prod
+
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/dist ./dist
+
+USER node
+
+ENTRYPOINT ["node", "dist/cli.js"]
