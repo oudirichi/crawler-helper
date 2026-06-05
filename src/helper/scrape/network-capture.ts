@@ -3,7 +3,14 @@ import type { HTTPResponse, Page } from 'puppeteer-core';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-const NetworkFilterSchema = z.object({
+interface networkFilterSchema {
+  filterType: 'url';
+  matchType: 'contains';
+  value: string;
+  httpResponseBody?: boolean;
+}
+
+const NetworkFilterSchema: z.ZodType<networkFilterSchema> = z.object({
   filterType: z.literal('url'),
   matchType: z.literal('contains'),
   value: z.string(),

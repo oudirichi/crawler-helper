@@ -79,7 +79,7 @@ screenshot is captured. The JSON shape mirrors the [Zyte API actions](https://do
     { "action": "click",           "selector": "[type='submit']",                                                   "button": "left" },
     { "action": "hover",           "selector": ".tooltip-target" },
     { "action": "scroll",          "selector": "#footer" },
-    { "action": "waitForTimeout",  "timeout": 500 }
+    { "action": "waitForTimeout",  "timeout": 2 }
   ]
 }
 ```
@@ -90,13 +90,48 @@ screenshot is captured. The JSON shape mirrors the [Zyte API actions](https://do
 | `type`              | `selector`, `text`           | `delay` (ms)                                         |
 | `select`            | `selector`, `values`         | —                                                    |
 | `waitForSelector`   | `selector`                   | `timeout` (ms, default 30 000)                       |
-| `waitForTimeout`    | `timeout` (ms)               | —                                                    |
+| `waitForTimeout`    | `timeout` (seconds)          | —                                                    |
 | `hover`             | `selector`                   | —                                                    |
 | `scroll`            | `selector`                   | —                                                    |
 
 **Selector**: either a plain CSS string `"#my-id"` or the full object
 `{ "type": "css", "value": "<css-selector>" }`. Only `type: "css"` is supported.
 `waitForSelector` additionally accepts `"state": "attached"` on the object form.
+
+#### String shorthand
+
+Each action may instead be written as a single string `"<verb>[:<number>] <rest>"`.
+String and object forms can be mixed freely in the same `actions` array. The example
+above is equivalent to:
+
+```json
+{
+  "actions": [
+    "select #author Albert Einstein",
+    "waitForSelector [value='world']",
+    "type:25 #q hello",
+    "click [type='submit']",
+    "hover .tooltip-target",
+    "scroll #footer",
+    "waitForTimeout:2"
+  ]
+}
+```
+
+| shorthand                       | rest             | `:N` modifier   | equivalent to                                          |
+|---------------------------------|------------------|-----------------|--------------------------------------------------------|
+| `click <selector>`              | selector         | `delay` (ms)    | `{ "action": "click", "selector", "delay"? }`          |
+| `hover <selector>`              | selector         | —               | `{ "action": "hover", "selector" }`                    |
+| `scroll <selector>`             | selector         | —               | `{ "action": "scroll", "selector" }`                   |
+| `waitForSelector <selector>`    | selector         | `timeout` (ms)  | `{ "action": "waitForSelector", "selector", "timeout"? }` |
+| `type <selector> <text>`        | selector + text  | `delay` (ms)    | `{ "action": "type", "selector", "text", "delay"? }`   |
+| `select <selector> <value>`     | selector + value | —               | `{ "action": "select", "selector", "values": [value] }` |
+| `waitForTimeout <n>`            | seconds (or `:N`)| —               | `{ "action": "waitForTimeout", "timeout": n }`         |
+
+For `type` and `select`, the **first whitespace-delimited token is the selector** and
+the remainder is the text/value. Use the object form for anything the shorthand can't
+express: selectors containing spaces (e.g. `#form input[name=q]`), `click`'s `button`,
+`select` with multiple values, or `waitForSelector`'s `"state": "attached"`.
 
 **Failure policy**: the first action that errors stops execution immediately. The process exits 1
 and writes `Error: action[<i>] <action>: <message>` to stderr. Network capture (if configured)

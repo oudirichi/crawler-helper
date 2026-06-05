@@ -3,12 +3,12 @@ import { validateFilters, attachNetworkCapture } from './scrape/network-capture'
 import { validateActions, runActions } from './scrape/actions';
 
 export type { NetworkFilter, NetworkCaptureEntry, FilterType, MatchType } from './scrape/network-capture';
-export type { Action, CssSelector, ActionName } from './scrape/actions';
+export type { Action, ActionInput, CssSelector, ActionName } from './scrape/actions';
 
 export interface ScrapeOptions {
   screenshot?: boolean;
   networkCapture?: import('./scrape/network-capture').NetworkFilter[];
-  actions?: import('./scrape/actions').Action[];
+  actions?: import('./scrape/actions').ActionInput[];
 }
 
 export interface ScrapeResult {
@@ -23,9 +23,8 @@ const USER_AGENT =
 
 export async function scrape(url: string, options: ScrapeOptions = {}): Promise<ScrapeResult> {
   const filters = options.networkCapture ?? [];
-  const actions = options.actions ?? [];
   validateFilters(filters);
-  validateActions(actions);
+  const actions = validateActions(options.actions ?? []);
 
   const browser = await launch();
   try {
