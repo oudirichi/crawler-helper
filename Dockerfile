@@ -1,5 +1,5 @@
 # ─── Base: Node + Chromium (Alpine — for CI and prod) ─────────────────────────
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 RUN apk add --no-cache \
   chromium \
@@ -16,7 +16,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # ─── Dev (Debian — avoids musl/native binary issues with rolldown) ─────────────
-FROM node:20 AS dev
+FROM node:24 AS dev
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   chromium \
