@@ -5,6 +5,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "domscrape": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": {
@@ -24,7 +27,7 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
-    "test": "",
+    "test": "vitest run",
     "lint": "eslint src/"
   },
   "keywords": [
@@ -39,11 +42,14 @@
     "eslint": "^10.0.2",
     "tsdown": "^0.2.0",
     "typescript": "^5.3.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^3.2.7"
   },
   "sideEffects": false,
   "dependencies": {
+    "commander": "^12.1.0",
     "env-paths": "^4.0.0",
-    "puppeteer-core": "^24.37.5"
+    "puppeteer-core": "^24.37.5",
+    "zod": "^4.4.3"
   }
 }
