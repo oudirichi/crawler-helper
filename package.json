@@ -27,7 +27,7 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
-    "test": "",
+    "test": "vitest run",
     "lint": "eslint src/"
   },
   "keywords": [
@@ -42,7 +42,8 @@
     "eslint": "^10.0.2",
     "tsdown": "^0.2.0",
     "typescript": "^5.3.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^3.2.7"
   },
   "sideEffects": false,
   "dependencies": {
