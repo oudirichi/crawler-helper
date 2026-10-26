@@ -11,7 +11,7 @@ A TypeScript library + CLI for Puppeteer-based crawling.
 
 ## External reference: Zyte API actions
 
-We intentionally mirror Zyte's `actions[]` JSON shape so inputs are portable between `domscrape` and the Zyte API.
+Zyte's `actions[]` is a design reference for our action vocabulary, not a spec we copy or must stay compatible with. We borrow names and shapes where they fit; `domscrape` is free to diverge (e.g. the string shorthand, seconds-based `waitForTimeout`).
 
 - Full spec: https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/actions
 - Browser automation guide: https://docs.zyte.com/zyte-api/usage/browser.html
@@ -25,6 +25,7 @@ We intentionally mirror Zyte's `actions[]` JSON shape so inputs are portable bet
 | `type`            | `selector`, `text`, `delay?`            | `page.type(css, text, { delay })`                    |
 | `select`          | `selector`, `values`                    | `page.select(css, ...values)`                        |
 | `waitForSelector` | `selector`, `timeout?` (default 30 000) | `page.waitForSelector(css, { timeout })`             |
+| `waitForTimeout`  | `timeout` (seconds)                     | `sleep(timeout * 1000)`                              |
 | `hover`           | `selector`                              | `page.hover(css)`                                    |
 | `scroll`          | `selector`                              | `page.$eval(css, el => el.scrollIntoView(...))`      |
 
@@ -32,14 +33,13 @@ Selector object: `{ type: "css", value: "..." }`. `waitForSelector` additionally
 `state: "attached"` on the selector (attached = element exists in DOM, which is puppeteer's
 default wait behaviour).
 
-## Zyte actions NOT yet implemented
+## Ideas from Zyte not yet implemented
 
-When extending, keep these Zyte names/shapes to preserve portability:
+Zyte's actions are a good starting point when extending; reuse a name/shape when it fits, deviate when it makes the design cleaner:
 
 - `waitForRequest` — wait until a request URL matches
 - `waitForResponse` — wait until a response URL matches
 - `waitForNavigation` — wait for a page navigation event (useful after `click` on links)
-- `waitForTimeout` — unconditional sleep (`{ "action": "waitForTimeout", "timeout": 500 }`)
 - `evaluate` — run arbitrary JS in the page context (`{ "action": "evaluate", "source": "..." }`)
 - `reload` — reload the current page
 - `goto` — navigate to a new URL mid-sequence (`{ "action": "goto", "url": "..." }`)
